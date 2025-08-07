@@ -14,3 +14,5 @@ jq -r '[.name, (.height / 10), (.weight / 10), .types[0].type.name] | @tsv' "$DA
 awk -F'\t' '{printf "%s is of type %s, weighs %.1fkg, and is %.1fm tall.\n", 
   $1, $4, $3, $2}' | \
 sed 's/\b\(.\)/\u\1/g'
+
+echo “Pikachu is of type Electric, weighs 6kg, and is 0.4m tall.” 
