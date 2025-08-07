@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# Input directory and output files
+INPUT_DIR="pokemon_data"
+CSV_FILE="pokemon_report.csv"
+ERROR_FILE="errors.txt"
+
+# Check if pokemon_data directory exists
+if [ ! -d "$INPUT_DIR" ]; then
+  echo "Error: $INPUT_DIR directory not found" >> "$ERROR_FILE"
+  exit 1
+fi
+
+# Create CSV header
+echo "Name,Height (m),Weight (kg)" > "$CSV_FILE"
+
+# List of Pokémon to process
+POKEMON=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
+
+# Extract data from each JSON file
+for pokemon in "${POKEMON[@]}"; do
+  json_file="$INPUT_DIR/$pokemon.json"
+  if [ -f "$json_file" ]; then
+    # Extract name, height (convert decimeters to meters), weight (convert hectograms to kg)
+    jq -r '[.name, (.height / 10), (.weight / 10)] | @csv' "$json_file" 2>>"$ERROR_FILE" | \
+    sed 's/"\(.*\)"/\1/' >> "$CSV_FILE"
+  else
+    echo "Error: $json_file not found" >> "$ERROR_FILE"
+  fi
+done
+
+# Check if CSV file has data
+if [ ! -s "$CSV_FILE" ]; then
+  echo "Error: No data written to $CSV_FILE" >> "$ERROR_FILE"
+  exit 1
+fi
+
+# Display the CSV content and calculate averages
+echo "CSV Report generated at: $CSV_FILE"
+echo
+cat "$CSV_FILE"
+echo
+
+# Calculate and display averages using awk
+awk -F',' '
+  NR==1 {next}  # Skip header
+  {
+    name[$1] = $1;
+    height[$1] = $2;
+    weight[$1] = $3;
+    total_height += $2;
+    total_weight += $3;
+    count++
+  }
+  END {
+    if (count > 0) {
+      printf "Average Height: %.2f m\n", total_height / count
+      printf "Average Weight: %.2f kg\n", total_weight / count
+    } else {
+      print "Error: No valid data to process"
+    }
+  }
+' "$CSV_FILE"
