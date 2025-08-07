@@ -1,0 +1,58 @@
+#!/bin/bash
+
+# Array of Pokémon to fetch data for
+POKEMONS=("Bulbasaur" "Ivysaur" "Venusaur" "Charmander" "Charmeleon")
+
+# Directory to store JSON output
+OUTPUT_DIR="pokemon_data"
+mkdir -p "$OUTPUT_DIR"
+
+# Function to fetch Pokémon data
+fetch_pokemon_data() {
+    local pokemon=$1
+    local output_file="$OUTPUT_DIR/${pokemon}.json"
+    
+    # Convert pokemon name to lowercase for API consistency
+    pokemon_lower=$(echo "$pokemon" | tr '[:upper:]' '[:lower:]')
+    
+    # Fetch data using curl and save to file
+    curl -s "https://pokeapi.co/api/v2/pokemon/${pokemon_lower}" -o "$output_file"
+    
+    # Check if fetch was successful
+    if [ $? -eq 0 ]; then
+        echo "Successfully fetched data for $pokemon"
+    else
+        echo "Failed to fetch data for $pokemon"
+        rm -f "$output_file"
+    fi
+}
+
+# Export the function so it can be used by background processes
+export -f fetch_pokemon_data
+
+# Array to store process IDs
+pids=()
+
+# Fetch data for each Pokémon in parallel
+for pokemon in "${POKEMONS[@]}"; do
+    fetch_pokemon_data "$pokemon" &
+    pids+=($!)
+done
+
+# Wait for all background processes to complete
+for pid in "${pids[@]}"; do
+    wait "$pid"
+done
+
+# Check if all files were created successfully
+echo "Checking results..."
+for pokemon in "${POKEMONS[@]}"; do
+    output_file="$OUTPUT_DIR/${pokemon}.json"
+    if [ -f "$output_file" ]; then
+        echo "Data for $pokemon saved in $output_file"
+    else
+        echo "No data found for $pokemon"
+    fi
+done
+
+echo "All Pokémon data retrieval completed."
