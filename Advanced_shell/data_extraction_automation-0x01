@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Input JSON file
+DATA_FILE="data.json"
+
+# Check if data.json exists
+if [ ! -f "$DATA_FILE" ]; then
+  echo "Error: $DATA_FILE not found" >&2
+  exit 1
+fi
+
+# Extract fields using jq and format output
+jq -r '[.name, (.height / 10), (.weight / 10), .types[0].type.name] | @tsv' "$DATA_FILE" | \
+awk -F'\t' '{printf "%s is of type %s, weighs %.1fkg, and is %.1fm tall.\n", 
+  $1, $4, $3, $2}' | \
+sed 's/\b\(.\)/\u\1/g'
